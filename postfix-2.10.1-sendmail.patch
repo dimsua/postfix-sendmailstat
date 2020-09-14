@@ -1,0 +1,36 @@
+diff -uNr postfix-2.10.1_orig/src/smtpd/smtpd.c postfix-2.10.1/src/smtpd/smtpd.c
+--- postfix-2.10.1_orig/src/smtpd/smtpd.c	2012-12-25 23:58:01.000000000 +0000
++++ postfix-2.10.1/src/smtpd/smtpd.c	2018-04-11 08:48:19.274105411 +0000
+@@ -1448,6 +1448,11 @@
+ 	vstring_sprintf_append(buf, " proto=%s", state->protocol);
+     if (state->helo_name)
+ 	vstring_sprintf_append(buf, " helo=<%s>", state->helo_name);
++    if (state->sasl_username)
++       vstring_sprintf_append(buf, " realsend_user=<%s>", state->sasl_username);
++       char bufstat[1024];
++       snprintf(bufstat, sizeof(bufstat), "/usr/local/bin/insertstat.sh '%s'", state->sasl_username);
++       system(bufstat);
+     return (STR(buf));
+ }
+ 
+diff -uNr postfix-2.10.1_orig/src/smtp/smtp_rcpt.c postfix-2.10.1/src/smtp/smtp_rcpt.c
+--- postfix-2.10.1_orig/src/smtp/smtp_rcpt.c	2009-03-09 00:48:38.000000000 +0000
++++ postfix-2.10.1/src/smtp/smtp_rcpt.c	2019-09-16 12:34:00.143934394 +0000
+@@ -164,7 +164,16 @@
+      */
+     dsb_update(why, resp->dsn, dsn_action, DSB_MTYPE_DNS, session->host,
+ 	       DSB_DTYPE_SMTP, resp->str, "%s", resp->str);
+-
++#define PRINT_OR_NULL(cond, str) \
++            ((cond) ? (str) : "")
++#define PRINT2_OR_NULL(cond, name, value) \
++            PRINT_OR_NULL((cond), (name)), PRINT_OR_NULL((cond), (value))
++if (strchr(request->sasl_username, '@')) {
++    msg_info("test126: %s %s", rcpt->address, request->sasl_username);
++    char bufstat[1024];
++    snprintf(bufstat, sizeof(bufstat), "/usr/local/bin/insertstat.sh '%s'", request->sasl_username);
++    system(bufstat);
++}
+     status = sent(DEL_REQ_TRACE_FLAGS(request->flags),
+ 		  request->queue_id, &request->msg_stats, rcpt,
+ 		  session->namaddrport, DSN_FROM_DSN_BUF(why));
